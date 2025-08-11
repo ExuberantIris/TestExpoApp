@@ -28,7 +28,7 @@ export async function testSth (text: string, addData?: Function, deleteData?: Fu
   for (let command of commandList) {
     if (command[0] == "add") {
       let today = new Date()
-      today.setHours(today.getHours() + 8)
+      today.setHours(today.getHours())
       addDataList.push({
         id: -1,
         name: command[1],
@@ -86,7 +86,7 @@ function executeCommand(command: string, addData: Function, deleteData: Function
   for (let command of commandList) {
     if (command[0] == "add") {
       let today = new Date()
-      today.setHours(today.getHours() + 8)
+      today.setHours(today.getHours())
       addDataList.push({
         id: -1,
         name: command[1],
