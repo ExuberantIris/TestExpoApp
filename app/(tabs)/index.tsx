@@ -16,39 +16,29 @@ import { useDatabase} from '@/scripts/useDatabase';
 import { useState, useRef, useEffect } from 'react';
 import VoiceButton from '@/component/voiceButton';
 
-const data: FoodData[] = [
-	{
-		id: 1,
-		name: "Gyuniku",
-		storeDate: new Date(2025, 8, 9),
-		expireDate: new Date(2025, 10, 10)
-	},
-	{
-		id: 2,
-		name: "GuuBaBun",
-		storeDate: new Date(2025, 8, 9),
-		expireDate: new Date(2025, 12, 10)
-	},
-
-]
-
-
 export default function Index() {
-	const {localDB, addData, deleteData, deleteDataByName} = useDatabase(db);
+	const {localDB, addData, deleteData, deleteDataByName, fetchData} = useDatabase(db);
 	const textInputRef = useRef<TextInput>(null);
 	const [title, setTitle] = useState<string>("");
-	const [secondTitle, setSecondTitle] = useState<string>("");
 
 	const handleAddFood = () => {
-		const foodDataList: FoodData[] = [
-			{
-				id: -1,
-				name: title,
-				storeDate: new Date(),
-				expireDate: new Date(2025, 12, 12)
-			}
-		]
-		addData(foodDataList);
+		// const foodDataList: FoodData[] = [
+		// 	{
+		// 		id: -1,
+		// 		name: title,
+    //     number: 3,
+		// 		storeDate: new Date(),
+		// 		expireDate: new Date(2025, 12, 12)
+		// 	}
+		// ]
+		// addData(foodDataList);
+    const deleteList = [
+      {
+        name: title,
+        number: 1
+      }
+    ]
+    deleteDataByName(deleteList)
 		setTitle("");
 		textInputRef?.current?.clear();
     textInputRef?.current?.focus();
@@ -73,6 +63,7 @@ export default function Index() {
 
 	useEffect(() => {
 		initDatabase(db)
+    fetchData()
 	}, [])
 
 	return (
@@ -97,8 +88,6 @@ export default function Index() {
 				/>
 			</View>
 		</View>
-
-		
 	);
 }
 

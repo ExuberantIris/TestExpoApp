@@ -22,7 +22,7 @@ export default function FoodItem({
 
   return (
     <View style={styles.container}>
-      <Text>{`${foodData.name}`}</Text>
+      <Text>{`${foodData.name}:${foodData.number}, ${foodData.expireDate}`}</Text>
 
       <View style={styles.rowContainer}>
         <Button title="Delete" onPress={handleDeleteTodo} color="red" />

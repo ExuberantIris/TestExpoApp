@@ -9,58 +9,46 @@ type Command = {
   text: string
 }
 
-export async function testSth (audioRecordingRef: any, addData: Function, deleteData: Function) {
-  const answer = await speechToText(audioRecordingRef)
-  console.log(answer)
+export async function testSth (text: string, addData?: Function, deleteData?: Function) {
+  const commandRoughList = text.split(";")
+  const commandList = []
+  for (let roughCommand of commandRoughList) {
+    if (roughCommand[roughCommand.length - 1] == ";") {
+      roughCommand = roughCommand.substring(0, roughCommand.length - 1)
+    }
+    const commandSublist = roughCommand.split(" ")
+    const filteredSublist = commandSublist.filter(word => word !== "" && word !== " ")
+    if (filteredSublist.length > 0) {
+      commandList.push(filteredSublist)
+    }
+  }
+  console.log(commandRoughList, commandList)
+  const addDataList: FoodData[] = []
+  const deleteDataList: string[] = []
+  for (let command of commandList) {
+    if (command[0] == "add") {
+      let today = new Date()
+      today.setHours(today.getHours() + 8)
+      addDataList.push({
+        id: -1,
+        name: command[1],
+        number: parseInt(command[2]),
+        storeDate: today,
+        expireDate: stringToDate(command[3])
+      })
+    } else if (command[0] == "delete") {
+      deleteDataList.push(command[1])
+    } //else ignore
+  }
 }
 
-export async function processByVoiceAgent(audioRecorder: AudioRecorder, addData: Function, deleteData: Function) {
-  const answer = await speechToText(audioRecorder)
-    .then(text => textToCommand(text))
-    .then(command => executeCommand(command, addData, deleteData))
+export async function processByVoiceAgent(text: string, addData: Function, deleteData: Function) {
+  const answer = textToCommand(text)
+    .then(command => {
+      console.log(command);
+      return executeCommand(command, addData, deleteData);
+    })
     .catch(error => console.log(error))
-}
-
-function processSpeechResult(speech: any) {
-  let longWord = ""
-  for (const sentence of speech) {
-    longWord += sentence.alternatives[0].transcript
-  }
-  return longWord
-}
-
-async function speechToText(audioRecordingRef: any): Promise<string> {
-  const recordingUri = audioRecordingRef?.current?.getURI() || '';
-  let base64Uri = '';
-
-  base64Uri = await FileSystem.readAsStringAsync(recordingUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  const uri = {
-    uri: base64Uri
-  }
-  const config = {
-    encoding: Platform.OS === 'android' ? 'AMR_WB' : 'LINEAR16',
-    sampleRateHertz: Platform.OS === 'android' ? 16000 : 41000,
-    languageCode: "cmn-Hant-TW"
-  }
-  const request = {
-    audio: uri,
-    config: config
-  }
-
-  return window
-    .fetch("https://speech.googleapis.com/v1p1beta1/speech:recognize?key=AIzaSyAdvUYZxn31Q8Wswb8S5yPDQ82cmJfXdcE",
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request)
-      }
-    )
-    .then(response => response.json())
-    .then(json => processSpeechResult(json))
 }
 
 function textToCommand(text: string): Promise<string> {
@@ -80,28 +68,37 @@ function textToCommand(text: string): Promise<string> {
 }
 
 function executeCommand(command: string, addData: Function, deleteData: Function) {
-  const commandRoughList = command.split("\n")
+  const commandRoughList = command.split(";")
   const commandList = []
-  for (let roughCommand in commandRoughList) {
+  for (let roughCommand of commandRoughList) {
     if (roughCommand[roughCommand.length - 1] == ";") {
       roughCommand = roughCommand.substring(0, roughCommand.length - 1)
     }
     const commandSublist = roughCommand.split(" ")
-    commandList.push(commandSublist)
+    const filteredSublist = commandSublist.filter(word => word !== "" && word !== " ")
+    if (filteredSublist.length > 0) {
+      commandList.push(filteredSublist)
+    }
   }
 
   const addDataList: FoodData[] = []
-  const deleteDataList: string[] = []
-  for (let command in commandList) {
+  const deleteDataList: object[] = []
+  for (let command of commandList) {
     if (command[0] == "add") {
+      let today = new Date()
+      today.setHours(today.getHours() + 8)
       addDataList.push({
         id: -1,
         name: command[1],
-        storeDate: new Date(),
-        expireDate: stringToDate(command[2])
+        number: parseInt(command[2]),
+        storeDate: today,
+        expireDate: stringToDate(command[3])
       })
     } else if (command[0] == "delete") {
-      deleteDataList.push(command[1])
+      deleteDataList.push({
+        name: command[1],
+        number: command[2] === "all" ? "all" : parseInt(command[2])
+      })
     } //else ignore
   }
 

@@ -19,12 +19,14 @@ export function useDatabase(db: SQLite.SQLiteDatabase) {
     for (let foodData of foodDataList) {
       const storeDateString = dateToString(foodData.storeDate)
       const expireDateString = dateToString(foodData.expireDate)
-      await db.runAsync(`
-          INSERT INTO test (name, storeDate, expireDate)
-          VALUES (?, ?, ?)
-      `, foodData.name, storeDateString, expireDateString)
+      const statement = await db.prepareAsync(`
+        INSERT INTO test (name, number, storeDate, expireDate)
+        VALUES ($name, $number, $storeDate, $expireDate)
+          ON CONFLICT (name) DO UPDATE SET number = number + $number
+      `)
+      await statement.executeAsync({$name: foodData.name, $number: foodData.number, $storeDate: storeDateString, $expireDate: expireDateString})
+      await statement.finalizeAsync()
     }
-
     fetchData()
   }
 
@@ -36,10 +38,31 @@ export function useDatabase(db: SQLite.SQLiteDatabase) {
     fetchData()
   }
 
-  async function deleteDataByName(name: string) {
-    await db.runAsync(
-      'DELETE FROM test WHERE name = ?'
-    , name);
+  type DeleteData = {
+    name: string,
+    number: number | "all"
+  }
+  async function deleteDataByName(deleteDataList: DeleteData[]) {
+    for (let dataOfDeletion of deleteDataList) {
+      console.log(dataOfDeletion)
+      if (dataOfDeletion.number === "all") {
+        await db.runAsync(
+          'DELETE FROM test WHERE name = ?'
+        , dataOfDeletion.name);
+      } else {
+        await db.runAsync(`
+          DELETE FROM test 
+            WHERE name = $name AND number <= $number;
+          `
+        , {$name: dataOfDeletion.name, $number: dataOfDeletion.number as number});
+        await db.runAsync(`
+          UPDATE test
+            SET number = number - $number
+            WHERE name = $name;
+          `
+        , {$name: dataOfDeletion.name, $number: dataOfDeletion.number as number});
+      }
+    }
 
     fetchData()
   }
@@ -47,7 +70,8 @@ export function useDatabase(db: SQLite.SQLiteDatabase) {
     localDB,
     addData,
     deleteData,
-    deleteDataByName
+    deleteDataByName,
+    fetchData
   }
 }
 

@@ -10,8 +10,13 @@ const db = SQLite.openDatabaseSync("storage.db");
 export function initDatabase(db: SQLite.SQLiteDatabase) {
   db.execSync(`
     PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL, storeDate TEXT NOT NULL, expireDate TEXT NOT NULL)
+    CREATE TABLE IF NOT EXISTS test (
+      id INTEGER PRIMARY KEY NOT NULL UNIQUE, 
+      name TEXT NOT NULL UNIQUE, 
+      number INTERGER NOT NULL, 
+      storeDate TEXT NOT NULL, 
+      expireDate TEXT NOT NULL
+    )
     `);
 }
-
 export default db;
