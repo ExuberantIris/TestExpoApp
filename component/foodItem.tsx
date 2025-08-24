@@ -1,30 +1,52 @@
-import { View, Text, StyleSheet, Button } from 'react-native'
-import FoodData from '@/scripts/foodData'
+import FoodData from '@/scripts/food_database/foodData';
 import { useState } from 'react';
+import { Button, StyleSheet, Text, View } from 'react-native';
+
+import { indexStyle } from '@/style/indexStyle';
+import UpdateButton from './updateButton';
+import tagDB from '@/scripts/tag_database/tagDatabase';
 
 type FoodItemProps = {
   foodData: FoodData
-  onDeletePress: (id: number) => void
+  onUpdatePress: (id: number, number: number, noteID: string) => void
+  onDeletePress: (id: number, noteID: string) => void
 }
 
 export default function FoodItem({
   foodData,
+  onUpdatePress,
   onDeletePress
 }: FoodItemProps) {
+  const [updateNum, setUpdateNum] = useState<number>(foodData.number);
 
-  const handleDeleteTodo = () => {
-    onDeletePress(foodData.id);
+  const handleChangeText = (num: number) => {setUpdateNum(num)};
+
+  const handleUpdateTodo = () => {
+    onUpdatePress(foodData.id, updateNum, foodData.noteID);
   };
 
-  // useEffect(() => {
-  //   setTitle(todo.title);
-  // }, [editable]);
+  const handleDeleteTodo = () => {
+    onDeletePress(foodData.id, foodData.noteID);
+  };
+
+  let storage = "無"
+  let otherStorage = tagDB.getFirstSync("SELECT name FROM tag WHERE tagID = ?", foodData.storage) as any
+  if (otherStorage !== null) {
+    storage = otherStorage.name as string
+  }
 
   return (
     <View style={styles.container}>
-      <Text>{`${foodData.name}:${foodData.number}, ${foodData.expireDate}`}</Text>
+      <View>
+      <Text style={indexStyle.contentText}>{`${foodData.name}(儲存：${storage}):${foodData.number}`}</Text>
+      <Text style={indexStyle.contentTextII}>{`${foodData.expireDate}`}</Text>
+      </View>
 
       <View style={styles.rowContainer}>
+        <View style={styles.updateContainer}>
+          <UpdateButton defaultNum={foodData.number} onChangeText={handleChangeText}/>
+          <Button title="Update" onPress={handleUpdateTodo} color="blue" />
+        </View>
         <Button title="Delete" onPress={handleDeleteTodo} color="red" />
       </View>
     </View>
@@ -32,14 +54,6 @@ export default function FoodItem({
 }
 
 const styles = StyleSheet.create({
-  textInput: {
-    borderWidth: 1,
-    flex: 1,
-    padding: 8,
-    borderRadius: 8,
-    borderColor: "gray",
-  },
-
   container: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -51,4 +65,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-});
+
+  updateContainer: {
+    flexDirection: "row",
+    alignSelf: "center",
+  },
+})

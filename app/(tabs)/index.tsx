@@ -1,126 +1,133 @@
-import FoodData from '@/scripts/foodData';
-import { 
-	View, 
-	FlatList, 
-	StyleSheet, 
-	Text, 
-	StatusBar, 
-	ListRenderItem, 
-	TextInput, 
-	Button 
+import { setNotificationHandler } from 'expo-notifications';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Button,
+  FlatList,
+  ListRenderItem,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 
-import db, { initDatabase } from '@/scripts/database';
+import { useIsFocused } from '@react-navigation/native';
 import FoodItem from '@/component/foodItem';
-import { useDatabase} from '@/scripts/useDatabase';
-import { useState, useRef, useEffect } from 'react';
 import VoiceButton from '@/component/voiceButton';
+import { takeFullDate } from '@/scripts/date/date';
+import DateDiff from '@/scripts/date/dateDiff';
+import db, { initDatabase } from '@/scripts/food_database/database';
+import tagDB, { initTagDatabase } from '@/scripts/tag_database/tagDatabase';
+import FoodData, { AddFoodData } from '@/scripts/food_database/foodData';
+import { useDatabase } from '@/scripts/food_database/useDatabase';
+import { indexStyle } from '@/style/indexStyle';
+import { localTagDB, useTagDatabase } from '@/scripts/tag_database/useTagDatabase';
+import TagDropdown from '@/component/tagDropdown';
+import TagItem from '@/component/tagItem';
+
+setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 export default function Index() {
-	const {localDB, addData, deleteData, deleteDataByName, fetchData} = useDatabase(db);
+	const {
+    localDB, addData, deleteData, 
+    deleteDataByName, fetchData, updateData 
+  } = useDatabase(db);
+  const {
+    fetchTagData
+  } = useTagDatabase(tagDB);
+  
 	const textInputRef = useRef<TextInput>(null);
 	const [title, setTitle] = useState<string>("");
+  const [storage, setStorage] = useState<number>(-1);
+  const [query, setQuery] = useState<number>(-1);
+  const [filterDB, setFilterDB] = useState<FoodData[]>([])
 
 	const handleAddFood = () => {
-		// const foodDataList: FoodData[] = [
-		// 	{
-		// 		id: -1,
-		// 		name: title,
-    //     number: 3,
-		// 		storeDate: new Date(),
-		// 		expireDate: new Date(2025, 12, 12)
-		// 	}
-		// ]
-		// addData(foodDataList);
-    const deleteList = [
-      {
-        name: title,
-        number: 1
-      }
-    ]
-    deleteDataByName(deleteList)
+    const OneDay = new DateDiff(1);
+    const today = takeFullDate(new Date());
+    const tomorrow = OneDay.getShiftedDate(today);
+		const foodDataList: AddFoodData[] = [
+			{
+				name: title,
+        number: 3,
+				storeDate: today,
+				expireDate: tomorrow,
+        storage: storage
+			}
+		]
+		addData(foodDataList);
 		setTitle("");
 		textInputRef?.current?.clear();
     textInputRef?.current?.focus();
 	};
 
-	const handleDeleteFood = (id: number) => {
-    deleteData(id);
-  };
-
 	const handleChangeText = (text: string) => setTitle(text);
+  const handleChangeStorage = (text: string) => setStorage(parseInt(text))
+  const handleChangeTag = (text: string) => setQuery(parseInt(text))
+
+  useEffect(() => {
+    const list = []
+    for (const foodData of localDB) {
+      if (foodData.storage == query || query === -1) {
+        list.push(foodData)
+      }
+    }
+    setFilterDB(list)
+  }, [query, localDB])
 
 	const renderFoodItem: ListRenderItem<FoodData> = ({ item: foodData}) => {
-		return (
-			<View>
-				<FoodItem
-						foodData={foodData}
-						onDeletePress={handleDeleteFood}
-				/>
-			</View>
-		)
+    return (
+      <View>
+        <FoodItem
+            foodData={foodData}
+            onUpdatePress={updateData}
+            onDeletePress={deleteData}
+        />
+      </View>
+    )
 	}
 
 	useEffect(() => {
 		initDatabase(db)
+    initTagDatabase(tagDB)
     fetchData()
+    fetchTagData()
 	}, [])
 
 	return (
-		<View style={styles.container}>
-			<View style={styles.headerContainer}>
+		<View style={indexStyle.container}>
+			{/* <View style={indexStyle.headerContainer}>
+        <TagDropdown 
+          changeStorage={handleChangeStorage} 
+        />
         <TextInput
           ref={textInputRef}
-          style={styles.textInput}
+          style={indexStyle.textInput}
           placeholder="Add a new Todo"
           onChangeText={handleChangeText}
         />
         <Button title="+ Add" onPress={handleAddFood} disabled={!title} />
-      </View>
-      <VoiceButton addData={addData} deleteData={deleteDataByName}/>
-			<View style={styles.container}>
+      </View> */}
+      <VoiceButton addData={addData} deleteData={deleteDataByName} />
+			<View style={indexStyle.flatListContainer}>
+        <View style={indexStyle.queryContainer}>
+          <Text style={indexStyle.contentTextII}>搜尋範圍：</Text>
+          <TagDropdown changeStorage={handleChangeTag} defaultTag='全部'/> 
+        </View>
 				<FlatList 
-				data = {localDB}
+				data = {filterDB}
 				renderItem={renderFoodItem}
 				keyExtractor = {(item) => item.id.toString()}
-				contentContainerStyle={styles.contentContainer}
-				ListEmptyComponent={<Text>No todos...</Text>}
+				contentContainerStyle={indexStyle.contentContainer}
+				ListEmptyComponent={<Text style={indexStyle.contentText}>No Food...</Text>}
 				/>
 			</View>
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-  textInput: {
-    borderWidth: 1,
-    flex: 1,
-    padding: 8,
-    borderRadius: 8,
-    borderColor: "gray",
-  },
-
-  container: {
-    flex: 1,
-  },
-
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    gap: 16,
-  },
-
-  header: {
-    fontWeight: "bold",
-    fontSize: 36,
-    verticalAlign: "bottom",
-  },
-
-  contentContainer: {
-    padding: 16,
-    gap: 16,
-    backgroundColor: "#fff",
-  },
-});
